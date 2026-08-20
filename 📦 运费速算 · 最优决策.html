@@ -1,0 +1,2077 @@
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes" />
+    <title>🚚 运费速算 · 最优决策</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f0f4fa;
+            padding: 14px;
+            color: #1a2332;
+        }
+        .app {
+            max-width: 880px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 32px;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.07);
+            padding: 24px 22px 32px;
+            transition: all 0.2s;
+        }
+        h1 {
+            font-size: 25px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            letter-spacing: -0.3px;
+            color: #0b1a33;
+            margin-bottom: 4px;
+        }
+        .sub {
+            font-size: 14px;
+            color: #4d6a8f;
+            margin-bottom: 22px;
+            border-left: 4px solid #2a7de1;
+            padding-left: 14px;
+            background: #f0f6ff;
+            border-radius: 0 10px 10px 0;
+            line-height: 1.6;
+            padding: 8px 14px;
+        }
+        .search-box {
+            position: relative;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 6px;
+        }
+        .field {
+            flex: 1 1 180px;
+            min-width: 140px;
+            position: relative;
+        }
+        .field label {
+            display: block;
+            font-weight: 600;
+            font-size: 13px;
+            color: #2c3e5a;
+            margin-bottom: 5px;
+            letter-spacing: 0.3px;
+        }
+        .field input,
+        .field select {
+            width: 100%;
+            padding: 12px 14px;
+            font-size: 16px;
+            border: 2px solid #dce3ed;
+            border-radius: 16px;
+            background: #fafcff;
+            transition: 0.2s;
+            color: #0b1a33;
+            appearance: auto;
+        }
+        .field input:focus,
+        .field select:focus {
+            outline: none;
+            border-color: #2a7de1;
+            box-shadow: 0 0 0 4px rgba(42, 125, 225, 0.12);
+            background: #fff;
+        }
+        .field input::placeholder {
+            color: #a8b8cf;
+        }
+
+        .suggestions {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            background: #fff;
+            border: 2px solid #dce3ed;
+            border-radius: 14px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 100;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+            display: none;
+            padding: 4px 0;
+        }
+        .suggestions.show {
+            display: block;
+        }
+        .suggestions .item {
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            border-bottom: 1px solid #f0f4fa;
+            transition: 0.1s;
+        }
+        .suggestions .item:hover {
+            background: #e8f0fe;
+            color: #1a3b6b;
+        }
+        .suggestions .item:last-child {
+            border-bottom: none;
+        }
+        .suggestions .item .match {
+            font-weight: 600;
+            color: #0b1a33;
+        }
+        .suggestions .item .hint {
+            color: #7a91b0;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+
+        .btn {
+            background: #1a3b6b;
+            color: #fff;
+            border: none;
+            border-radius: 16px;
+            padding: 14px 34px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 4px 14px rgba(26, 59, 107, 0.25);
+            flex: 0 0 auto;
+            align-self: flex-end;
+            margin-bottom: 2px;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+        .btn:hover {
+            background: #0f2a4f;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 22px rgba(26, 59, 107, 0.3);
+        }
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .result-area {
+            margin-top: 22px;
+            border-top: 2px solid #eef3f9;
+            padding-top: 18px;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: #3d5779;
+            background: #f2f7fe;
+            padding: 10px 18px;
+            border-radius: 14px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 6px 16px;
+            align-items: center;
+        }
+        .stats span {
+            font-weight: 500;
+        }
+        .stats .highlight {
+            color: #1a3b6b;
+            font-weight: 700;
+        }
+
+        .card-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 620px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .card-list::-webkit-scrollbar {
+            width: 5px;
+        }
+        .card-list::-webkit-scrollbar-thumb {
+            background: #c9d7e9;
+            border-radius: 10px;
+        }
+
+        .card {
+            border-radius: 18px;
+            padding: 14px 18px;
+            border: 1.5px solid #e7eef7;
+            transition: 0.15s;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px 14px;
+            background: #fafdff;
+            position: relative;
+        }
+        .card:hover {
+            border-color: #b8cee8;
+            background: #f5faff;
+            transform: translateX(2px);
+        }
+        .card .left {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px 14px;
+            flex: 2 1 220px;
+        }
+        .card .left .rank {
+            font-size: 22px;
+            font-weight: 800;
+            min-width: 32px;
+            text-align: center;
+            line-height: 1;
+            color: #4d6a8f;
+            font-feature-settings: "tnum";
+        }
+        .card .left .rank.gold {
+            color: #b8860b;
+            font-size: 26px;
+        }
+        .card .left .rank.silver {
+            color: #4a7db5;
+            font-size: 24px;
+        }
+        .card .left .rank.bronze {
+            color: #8e44ad;
+            font-size: 24px;
+        }
+
+        .card .left .carrier {
+            font-weight: 700;
+            font-size: 16px;
+            color: #0b1a33;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .card .left .carrier .badge {
+            font-size: 10px;
+            background: #dce6f2;
+            padding: 2px 10px;
+            border-radius: 30px;
+            font-weight: 500;
+            color: #1f3d66;
+        }
+        .card .left .origin {
+            font-size: 13.5px;
+            color: #2e4a72;
+        }
+        .card .left .origin strong {
+            font-weight: 600;
+            color: #0f2a4f;
+        }
+
+        .card .right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            flex: 1 0 auto;
+            justify-content: flex-end;
+        }
+        .card .right .price {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0f2a4f;
+            letter-spacing: -0.2px;
+            white-space: nowrap;
+        }
+        .card .right .price small {
+            font-size: 13px;
+            font-weight: 400;
+            color: #5e7a9e;
+        }
+        .card .right .tag {
+            font-size: 11px;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .tag.best {
+            background: #f7e9b0;
+            color: #7a5d0a;
+        }
+        .tag.good {
+            background: #d4e4f7;
+            color: #1f4a7a;
+        }
+        .tag.nice {
+            background: #e8d5f5;
+            color: #6b3a8a;
+        }
+
+        .card.rank-1 {
+            background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);
+            border-color: #f0d060;
+            box-shadow: 0 4px 16px rgba(212, 175, 55, 0.15);
+        }
+        .card.rank-2 {
+            background: linear-gradient(135deg, #f0f7ff 0%, #dce8f8 100%);
+            border-color: #8ab3e0;
+            box-shadow: 0 4px 16px rgba(74, 125, 181, 0.12);
+        }
+        .card.rank-3 {
+            background: linear-gradient(135deg, #f6f0fc 0%, #e8daf5 100%);
+            border-color: #c9a8d9;
+            box-shadow: 0 4px 16px rgba(142, 68, 173, 0.10);
+        }
+
+        .empty {
+            text-align: center;
+            padding: 48px 12px;
+            color: #6a7f9e;
+            font-size: 15px;
+            line-height: 1.8;
+        }
+        .empty .icon {
+            font-size: 44px;
+            display: block;
+            margin-bottom: 12px;
+        }
+        .loading {
+            text-align: center;
+            padding: 30px;
+            color: #2a7de1;
+            font-weight: 500;
+        }
+
+        .footer-note {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #8399b8;
+            text-align: center;
+            border-top: 1px solid #eaf0f8;
+            padding-top: 16px;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 600px) {
+            .app {
+                padding: 16px 14px;
+                border-radius: 20px;
+            }
+            h1 {
+                font-size: 20px;
+            }
+            .search-box {
+                gap: 10px;
+            }
+            .field {
+                flex: 1 1 100%;
+                min-width: 0;
+            }
+            .btn {
+                width: 100%;
+                justify-content: center;
+                padding: 14px;
+                white-space: normal;
+            }
+            .card {
+                padding: 12px 14px;
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .card .left {
+                flex: 1 1 auto;
+                gap: 6px 10px;
+            }
+            .card .right {
+                justify-content: space-between;
+                border-top: 1px dashed #dce3ed;
+                padding-top: 10px;
+                margin-top: 4px;
+            }
+            .card .right .price {
+                font-size: 18px;
+            }
+            .stats {
+                font-size: 13px;
+                padding: 8px 14px;
+            }
+            .card .left .rank {
+                font-size: 18px;
+                min-width: 26px;
+            }
+            .card .left .rank.gold {
+                font-size: 22px;
+            }
+            .card .left .rank.silver,
+            .card .left .rank.bronze {
+                font-size: 20px;
+            }
+        }
+        @media (max-width: 400px) {
+            .card .left .carrier {
+                font-size: 14px;
+            }
+            .card .right .price {
+                font-size: 16px;
+            }
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a2f4a;
+            color: #fff;
+            padding: 12px 28px;
+            border-radius: 40px;
+            font-size: 15px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+            pointer-events: none;
+            z-index: 999;
+            max-width: 92%;
+            text-align: center;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app" id="app">
+        <h1>📦 运费速算 · 最优决策</h1>
+        <div class="sub">输入目的地 &amp; 重量，自动匹配最划算的始发地 + 快递 · 支持省市县区模糊搜索</div>
+
+        <div class="search-box">
+            <div class="field" style="flex:2;min-width:200px;">
+                <label for="destInput">📍 收货目的地</label>
+                <input type="text" id="destInput" placeholder="如：北京、杭州、宝鸡…" value="河南" autocomplete="off" />
+                <div class="suggestions" id="suggestions"></div>
+            </div>
+            <div class="field" style="flex:1;min-width:120px;">
+                <label for="weightInput">⚖️ 重量 (kg)</label>
+                <input type="number" id="weightInput" placeholder="公斤数" value="25" min="0.5" step="0.5" />
+            </div>
+            <button class="btn" id="searchBtn">🚀 查询最优</button>
+        </div>
+
+        <div class="result-area" id="resultArea">
+            <div class="stats" id="statsBar">
+                <span>📊 共 <strong id="countDisplay">0</strong> 条可选线路</span>
+                <span>💰 最低 <strong id="minPriceDisplay">—</strong></span>
+                <span>🏷️ 推荐 <strong id="bestCarrierDisplay">—</strong></span>
+            </div>
+            <div id="resultList" class="card-list">
+                <div class="empty">
+                    <span class="icon">🔍</span>
+                    输入目的地和重量，点击查询<br />
+                    系统将遍历所有工厂 + 快递组合
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-note">
+            ⚡ 数据基于 <strong>2026-08-01</strong> 运费速算表 · 覆盖 顺丰 · 德邦 · 韵达 · 跨越速运
+            <br /> 跨越速运仅保留 <strong>本省市、江浙沪皖、京津冀</strong> 互发线路
+            <br /> 实际运费以账单为准，软件开发人赵辉涛
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ============================================================
+        //  1. 目的地映射表 (模糊搜索)
+        // ============================================================
+        const DEST_MAP = {
+            // 省级映射（精确）
+            "北京": "北京",
+            "北京市": "北京",
+            "天津": "天津",
+            "天津市": "天津",
+            "上海": "上海",
+            "上海市": "上海",
+            "重庆": "重庆",
+            "重庆市": "重庆",
+            "河北": "河北",
+            "河北省": "河北",
+            "石家庄": "河北",
+            "唐山": "河北",
+            "秦皇岛": "河北",
+            "邯郸": "河北",
+            "邢台": "河北",
+            "保定": "河北",
+            "张家口": "河北",
+            "承德": "河北",
+            "沧州": "河北",
+            "廊坊": "河北",
+            "衡水": "河北",
+            "山西": "山西",
+            "山西省": "山西",
+            "太原": "山西",
+            "大同": "山西",
+            "阳泉": "山西",
+            "长治": "山西",
+            "晋城": "山西",
+            "朔州": "山西",
+            "晋中": "山西",
+            "运城": "山西",
+            "忻州": "山西",
+            "临汾": "山西",
+            "吕梁": "山西",
+            "内蒙古": "内蒙古",
+            "内蒙古自治区": "内蒙古",
+            "呼和浩特": "内蒙古",
+            "包头": "内蒙古",
+            "乌海": "内蒙古",
+            "赤峰": "内蒙古",
+            "通辽": "内蒙古",
+            "鄂尔多斯": "内蒙古",
+            "呼伦贝尔": "内蒙古",
+            "巴彦淖尔": "内蒙古",
+            "乌兰察布": "内蒙古",
+            "辽宁": "辽宁",
+            "辽宁省": "辽宁",
+            "沈阳": "辽宁",
+            "大连": "辽宁",
+            "鞍山": "辽宁",
+            "抚顺": "辽宁",
+            "本溪": "辽宁",
+            "丹东": "辽宁",
+            "锦州": "辽宁",
+            "营口": "辽宁",
+            "阜新": "辽宁",
+            "辽阳": "辽宁",
+            "盘锦": "辽宁",
+            "铁岭": "辽宁",
+            "朝阳": "辽宁",
+            "葫芦岛": "辽宁",
+            "吉林": "吉林",
+            "吉林省": "吉林",
+            "长春": "吉林",
+            "吉林市": "吉林",
+            "四平": "吉林",
+            "辽源": "吉林",
+            "通化": "吉林",
+            "白山": "吉林",
+            "松原": "吉林",
+            "白城": "吉林",
+            "延边": "吉林",
+            "黑龙江": "黑龙江",
+            "黑龙江省": "黑龙江",
+            "哈尔滨": "黑龙江",
+            "齐齐哈尔": "黑龙江",
+            "鸡西": "黑龙江",
+            "鹤岗": "黑龙江",
+            "双鸭山": "黑龙江",
+            "大庆": "黑龙江",
+            "伊春": "黑龙江",
+            "佳木斯": "黑龙江",
+            "七台河": "黑龙江",
+            "牡丹江": "黑龙江",
+            "黑河": "黑龙江",
+            "绥化": "黑龙江",
+            "江苏": "江苏",
+            "江苏省": "江苏",
+            "南京": "江苏",
+            "无锡": "江苏",
+            "徐州": "江苏",
+            "常州": "江苏",
+            "苏州": "江苏",
+            "南通": "江苏",
+            "连云港": "江苏",
+            "淮安": "江苏",
+            "盐城": "江苏",
+            "扬州": "江苏",
+            "镇江": "江苏",
+            "泰州": "江苏",
+            "宿迁": "江苏",
+            "浙江": "浙江",
+            "浙江省": "浙江",
+            "杭州": "浙江",
+            "宁波": "浙江",
+            "温州": "浙江",
+            "嘉兴": "浙江",
+            "湖州": "浙江",
+            "绍兴": "浙江",
+            "金华": "浙江",
+            "衢州": "浙江",
+            "舟山": "浙江",
+            "台州": "浙江",
+            "丽水": "浙江",
+            "安徽": "安徽",
+            "安徽省": "安徽",
+            "合肥": "安徽",
+            "芜湖": "安徽",
+            "蚌埠": "安徽",
+            "淮南": "安徽",
+            "马鞍山": "安徽",
+            "淮北": "安徽",
+            "铜陵": "安徽",
+            "安庆": "安徽",
+            "黄山": "安徽",
+            "滁州": "安徽",
+            "阜阳": "安徽",
+            "宿州": "安徽",
+            "六安": "安徽",
+            "亳州": "安徽",
+            "池州": "安徽",
+            "宣城": "安徽",
+            "福建": "福建",
+            "福建省": "福建",
+            "福州": "福建",
+            "厦门": "福建",
+            "莆田": "福建",
+            "三明": "福建",
+            "泉州": "福建",
+            "漳州": "福建",
+            "南平": "福建",
+            "龙岩": "福建",
+            "宁德": "福建",
+            "江西": "江西",
+            "江西省": "江西",
+            "南昌": "江西",
+            "景德镇": "江西",
+            "萍乡": "江西",
+            "九江": "江西",
+            "新余": "江西",
+            "鹰潭": "江西",
+            "赣州": "江西",
+            "吉安": "江西",
+            "宜春": "江西",
+            "抚州": "江西",
+            "上饶": "江西",
+            "山东": "山东",
+            "山东省": "山东",
+            "济南": "山东",
+            "青岛": "山东",
+            "淄博": "山东",
+            "枣庄": "山东",
+            "东营": "山东",
+            "烟台": "山东",
+            "潍坊": "山东",
+            "济宁": "山东",
+            "泰安": "山东",
+            "威海": "山东",
+            "日照": "山东",
+            "临沂": "山东",
+            "德州": "山东",
+            "聊城": "山东",
+            "滨州": "山东",
+            "菏泽": "山东",
+            "河南": "河南",
+            "河南省": "河南",
+            "郑州": "河南",
+            "开封": "河南",
+            "洛阳": "河南",
+            "平顶山": "河南",
+            "安阳": "河南",
+            "鹤壁": "河南",
+            "新乡": "河南",
+            "焦作": "河南",
+            "濮阳": "河南",
+            "许昌": "河南",
+            "漯河": "河南",
+            "三门峡": "河南",
+            "南阳": "河南",
+            "商丘": "河南",
+            "信阳": "河南",
+            "周口": "河南",
+            "驻马店": "河南",
+            "济源": "河南",
+            "湖北": "湖北",
+            "湖北省": "湖北",
+            "武汉": "湖北",
+            "黄石": "湖北",
+            "十堰": "湖北",
+            "宜昌": "湖北",
+            "襄阳": "湖北",
+            "鄂州": "湖北",
+            "荆门": "湖北",
+            "孝感": "湖北",
+            "荆州": "湖北",
+            "黄冈": "湖北",
+            "咸宁": "湖北",
+            "随州": "湖北",
+            "恩施": "湖北",
+            "仙桃": "湖北",
+            "潜江": "湖北",
+            "天门": "湖北",
+            "神农架": "湖北",
+            "湖南": "湖南",
+            "湖南省": "湖南",
+            "长沙": "湖南",
+            "株洲": "湖南",
+            "湘潭": "湖南",
+            "衡阳": "湖南",
+            "邵阳": "湖南",
+            "岳阳": "湖南",
+            "常德": "湖南",
+            "张家界": "湖南",
+            "益阳": "湖南",
+            "郴州": "湖南",
+            "永州": "湖南",
+            "怀化": "湖南",
+            "娄底": "湖南",
+            "湘西": "湖南",
+            "广东": "广东",
+            "广东省": "广东",
+            "广州": "广东",
+            "韶关": "广东",
+            "深圳": "广东",
+            "珠海": "广东",
+            "汕头": "广东",
+            "佛山": "广东",
+            "江门": "广东",
+            "湛江": "广东",
+            "茂名": "广东",
+            "肇庆": "广东",
+            "惠州": "广东",
+            "梅州": "广东",
+            "汕尾": "广东",
+            "河源": "广东",
+            "阳江": "广东",
+            "清远": "广东",
+            "东莞": "广东",
+            "中山": "广东",
+            "潮州": "广东",
+            "揭阳": "广东",
+            "云浮": "广东",
+            "广西": "广西",
+            "广西壮族自治区": "广西",
+            "南宁": "广西",
+            "柳州": "广西",
+            "桂林": "广西",
+            "梧州": "广西",
+            "北海": "广西",
+            "防城港": "广西",
+            "钦州": "广西",
+            "贵港": "广西",
+            "玉林": "广西",
+            "百色": "广西",
+            "贺州": "广西",
+            "河池": "广西",
+            "来宾": "广西",
+            "崇左": "广西",
+            "海南": "海南",
+            "海南省": "海南",
+            "海口": "海南",
+            "三亚": "海南",
+            "三沙": "海南",
+            "儋州": "海南",
+            "五指山": "海南",
+            "琼海": "海南",
+            "文昌": "海南",
+            "万宁": "海南",
+            "东方": "海南",
+            "四川": "四川",
+            "四川省": "四川",
+            "成都": "四川",
+            "自贡": "四川",
+            "攀枝花": "四川",
+            "泸州": "四川",
+            "德阳": "四川",
+            "绵阳": "四川",
+            "广元": "四川",
+            "遂宁": "四川",
+            "内江": "四川",
+            "乐山": "四川",
+            "南充": "四川",
+            "眉山": "四川",
+            "宜宾": "四川",
+            "广安": "四川",
+            "达州": "四川",
+            "雅安": "四川",
+            "巴中": "四川",
+            "资阳": "四川",
+            "阿坝": "四川",
+            "甘孜": "四川",
+            "凉山": "四川",
+            "贵州": "贵州",
+            "贵州省": "贵州",
+            "贵阳": "贵州",
+            "六盘水": "贵州",
+            "遵义": "贵州",
+            "安顺": "贵州",
+            "毕节": "贵州",
+            "铜仁": "贵州",
+            "黔西南": "贵州",
+            "黔东南": "贵州",
+            "黔南": "贵州",
+            "云南": "云南",
+            "云南省": "云南",
+            "昆明": "云南",
+            "曲靖": "云南",
+            "玉溪": "云南",
+            "保山": "云南",
+            "昭通": "云南",
+            "丽江": "云南",
+            "普洱": "云南",
+            "临沧": "云南",
+            "楚雄": "云南",
+            "红河": "云南",
+            "文山": "云南",
+            "西双版纳": "云南",
+            "大理": "云南",
+            "德宏": "云南",
+            "怒江": "云南",
+            "迪庆": "云南",
+            "西藏": "西藏",
+            "西藏自治区": "西藏",
+            "拉萨": "西藏",
+            "日喀则": "西藏",
+            "昌都": "西藏",
+            "林芝": "西藏",
+            "山南": "西藏",
+            "那曲": "西藏",
+            "阿里": "西藏",
+            "陕西": "陕西",
+            "陕西省": "陕西",
+            "西安": "陕西",
+            "铜川": "陕西",
+            "宝鸡": "陕西",
+            "咸阳": "陕西",
+            "渭南": "陕西",
+            "延安": "陕西",
+            "汉中": "陕西",
+            "榆林": "陕西",
+            "安康": "陕西",
+            "商洛": "陕西",
+            "甘肃": "甘肃",
+            "甘肃省": "甘肃",
+            "兰州": "甘肃",
+            "嘉峪关": "甘肃",
+            "金昌": "甘肃",
+            "白银": "甘肃",
+            "天水": "甘肃",
+            "武威": "甘肃",
+            "张掖": "甘肃",
+            "平凉": "甘肃",
+            "酒泉": "甘肃",
+            "庆阳": "甘肃",
+            "定西": "甘肃",
+            "陇南": "甘肃",
+            "临夏": "甘肃",
+            "甘南": "甘肃",
+            "青海": "青海",
+            "青海省": "青海",
+            "西宁": "青海",
+            "海东": "青海",
+            "海北": "青海",
+            "黄南": "青海",
+            "海南州": "青海",
+            "果洛": "青海",
+            "玉树": "青海",
+            "海西": "青海",
+            "宁夏": "宁夏",
+            "宁夏回族自治区": "宁夏",
+            "银川": "宁夏",
+            "石嘴山": "宁夏",
+            "吴忠": "宁夏",
+            "固原": "宁夏",
+            "中卫": "宁夏",
+            "新疆": "新疆",
+            "新疆维吾尔自治区": "新疆",
+            "乌鲁木齐": "新疆",
+            "克拉玛依": "新疆",
+            "吐鲁番": "新疆",
+            "哈密": "新疆",
+            "昌吉": "新疆",
+            "博尔塔拉": "新疆",
+            "巴音郭楞": "新疆",
+            "阿克苏": "新疆",
+            "克孜勒苏": "新疆",
+            "喀什": "新疆",
+            "和田": "新疆",
+            "伊犁": "新疆",
+            "塔城": "新疆",
+            "阿勒泰": "新疆",
+            "石河子": "新疆",
+            "阿拉尔": "新疆",
+            "图木舒克": "新疆",
+            "五家渠": "新疆",
+            "北屯": "新疆",
+            "铁门关": "新疆",
+            "双河": "新疆",
+            "可克达拉": "新疆",
+            "昆玉": "新疆",
+            "胡杨河": "新疆",
+            "新星": "新疆",
+            // 内蒙特殊地区
+            "内蒙中部": "内蒙古",
+            "内蒙西部": "内蒙古",
+            "内蒙东部": "内蒙古",
+            // 顺丰特殊目的地（精确）
+            "陕西（咸阳、西安）": "陕西（咸阳、西安）",
+            "陕西（咸阳、西安以外）": "陕西（咸阳、西安以外）",
+            "咸阳": "陕西（咸阳、西安）",
+            "西安": "陕西（咸阳、西安）",
+            "宝鸡": "陕西（咸阳、西安以外）",
+            "渭南": "陕西（咸阳、西安以外）",
+            "延安": "陕西（咸阳、西安以外）",
+            "汉中": "陕西（咸阳、西安以外）",
+            "榆林": "陕西（咸阳、西安以外）",
+            "安康": "陕西（咸阳、西安以外）",
+            "商洛": "陕西（咸阳、西安以外）",
+            "铜川": "陕西（咸阳、西安以外）",
+            // 其他
+            "沈阳": "辽宁",
+            "青岛": "山东",
+            "郑州": "河南",
+            "兰州": "甘肃",
+            "南京": "江苏",
+            "湖州": "浙江",
+            "黄冈": "湖北",
+            "南昌": "江西",
+            "福州": "福建",
+            "肇庆": "广东",
+            "南宁": "广西",
+            "贵州": "贵州",
+            "重庆": "重庆",
+            "惠州": "广东",
+            "乌鲁木齐": "新疆",
+            "保定": "河北",
+        };
+
+        // ============================================================
+        //  2. 运费数据 (已按规则裁剪)
+        // ============================================================
+
+        // -------- 顺丰 (移除南京) --------
+        const SF_DATA = {
+            "西安": {
+                "陕西（咸阳、西安）": { base20: 19.6, extra21_100: 1.1, extra100: 0.8 },
+                "陕西（咸阳、西安以外）": { base20: 20.3, extra21_100: 1.1, extra100: 0.9 },
+                "山西": { base20: 35.7, extra21_100: 1.8, extra100: 1.5 },
+                "宁夏": { base20: 44.1, extra21_100: 1.3, extra100: 1.2 },
+                "甘肃": { base20: 43.4, extra21_100: 1.0, extra100: 0.8 },
+                "新疆": { base20: 80.5, extra21_100: 2.2, extra100: 1.8 },
+                "青海": { base20: 44.8, extra21_100: 1.5, extra100: 1.3 },
+                "内蒙古": { base20: 46.2, extra21_100: 2.0, extra100: 1.8 },
+                "内蒙古中部": { base20: 46.2, extra21_100: 2.0, extra100: 1.8 },
+                "内蒙古西部": { base20: 43.4, extra21_100: 2.0, extra100: 1.7 },
+                "内蒙古东部": { base20: 51.1, extra21_100: 2.0, extra100: 1.8 }
+            },
+            "沈阳": {
+                "北京": { base20: 30.8, extra21_100: 1.5, extra100: 1.1 },
+                "黑龙江": { base20: 30.8, extra21_100: 1.5, extra100: 1.2 },
+                "吉林": { base20: 23.1, extra21_100: 1.3, extra100: 1.0 },
+                "辽宁": { base20: 20.3, extra21_100: 1.1, extra100: 0.9 },
+                "内蒙古": { base20: 45.5, extra21_100: 1.3, extra100: 1.1 },
+                "内蒙古西部": { base20: 41.3, extra21_100: 1.4, extra100: 1.2 },
+                "内蒙古中部": { base20: 45.5, extra21_100: 1.3, extra100: 1.1 },
+                "天津": { base20: 28.0, extra21_100: 1.4, extra100: 1.1 }
+            },
+            "保定": {
+                "北京": { base20: 22.4, extra21_100: 1.3, extra100: 1.3 },
+                "河北": { base20: 22.4, extra21_100: 1.3, extra100: 1.3 },
+                "黑龙江": { base20: 36.4, extra21_100: 1.8, extra100: 1.9 },
+                "辽宁": { base20: 36.4, extra21_100: 1.7, extra100: 1.7 },
+                "内蒙古": { base20: 44.1, extra21_100: 1.5, extra100: 1.5 },
+                "内蒙古西部": { base20: 35.7, extra21_100: 1.5, extra100: 1.5 },
+                "内蒙古中部": { base20: 44.1, extra21_100: 1.5, extra100: 1.5 },
+                "山西": { base20: 23.8, extra21_100: 1.3, extra100: 1.3 },
+                "天津": { base20: 22.4, extra21_100: 1.3, extra100: 1.3 }
+            },
+            "青岛": {
+                "江苏": { base20: 28.7, extra21_100: 1.4, extra100: 1.1 },
+                "山东": { base20: 18.2, extra21_100: 1.0, extra100: 0.8 },
+                "天津": { base20: 35.0, extra21_100: 1.5, extra100: 1.2 }
+            },
+            "郑州": {
+                "新疆": { base20: 98.0, extra21_100: 2.2, extra100: 2.0 },
+                "河南": { base20: 16.8, extra21_100: 1.0, extra100: 0.8 },
+                "湖北": { base20: 30.8, extra21_100: 1.3, extra100: 1.1 },
+                "河北": { base20: 30.8, extra21_100: 1.3, extra100: 1.1 },
+                "安徽": { base20: 32.2, extra21_100: 1.3, extra100: 1.2 },
+                "山东": { base20: 30.8, extra21_100: 1.3, extra100: 1.2 },
+                "北京": { base20: 31.5, extra21_100: 1.5, extra100: 1.2 },
+                "湖南": { base20: 32.2, extra21_100: 1.4, extra100: 1.3 },
+                "江西": { base20: 32.2, extra21_100: 1.4, extra100: 1.2 },
+                "山西": { base20: 30.8, extra21_100: 1.3, extra100: 1.3 },
+                "天津": { base20: 31.5, extra21_100: 1.4, extra100: 1.2 },
+                "陕西": { base20: 31.5, extra21_100: 1.3, extra100: 1.2 },
+                "上海": { base20: 30.1, extra21_100: 1.5, extra100: 1.2 },
+                "广东": { base20: 28.7, extra21_100: 1.5, extra100: 1.3 },
+                "江苏": { base20: 30.1, extra21_100: 1.5, extra100: 1.3 },
+                "辽宁": { base20: 32.2, extra21_100: 1.8, extra100: 1.4 },
+                "福建": { base20: 32.2, extra21_100: 1.6, extra100: 1.3 },
+                "浙江": { base20: 30.1, extra21_100: 1.6, extra100: 1.3 },
+                "重庆": { base20: 32.2, extra21_100: 1.7, extra100: 1.3 },
+                "广西": { base20: 32.9, extra21_100: 1.7, extra100: 1.5 },
+                "四川": { base20: 32.9, extra21_100: 1.8, extra100: 1.5 },
+                "吉林": { base20: 32.2, extra21_100: 1.8, extra100: 1.4 },
+                "青海": { base20: 34.3, extra21_100: 1.7, extra100: 1.5 },
+                "内蒙古": { base20: 37.1, extra21_100: 1.9, extra100: 1.6 },
+                "内蒙古中部": { base20: 37.1, extra21_100: 1.8, extra100: 1.5 },
+                "内蒙古西部": { base20: 32.9, extra21_100: 1.8, extra100: 1.5 },
+                "宁夏": { base20: 33.6, extra21_100: 1.8, extra100: 1.5 },
+                "贵州": { base20: 32.9, extra21_100: 1.8, extra100: 1.5 },
+                "黑龙江": { base20: 35.7, extra21_100: 1.9, extra100: 1.5 },
+                "甘肃": { base20: 34.3, extra21_100: 1.8, extra100: 1.5 },
+                "海南": { base20: 35.7, extra21_100: 1.9, extra100: 1.6 },
+                "云南": { base20: 37.1, extra21_100: 2.0, extra100: 1.7 }
+            },
+            "兰州": {
+                "甘肃": { base20: 20.3, extra21_100: 1.1, extra100: 0.9 },
+                "陕西": { base20: 33.6, extra21_100: 1.3, extra100: 1.3 },
+                "内蒙古": { base20: 49.7, extra21_100: 2.2, extra100: 1.9 },
+                "内蒙古西部": { base20: 40.6, extra21_100: 2.2, extra100: 1.8 },
+                "内蒙古中部": { base20: 49.7, extra21_100: 2.0, extra100: 1.7 },
+                "宁夏": { base20: 42.7, extra21_100: 1.3, extra100: 1.3 },
+                "青海": { base20: 36.4, extra21_100: 1.1, extra100: 1.0 },
+                "四川": { base20: 37.8, extra21_100: 1.8, extra100: 1.5 },
+                "新疆": { base20: 70.7, extra21_100: 2.2, extra100: 2.0 }
+            },
+            "湖州": {
+                "安徽": { base20: 21.0, extra21_100: 1.2, extra100: 0.9 },
+                "江苏": { base20: 18.9, extra21_100: 1.1, extra100: 0.8 },
+                "上海": { base20: 20.3, extra21_100: 1.1, extra100: 0.9 },
+                "浙江": { base20: 20.3, extra21_100: 1.1, extra100: 0.9 }
+            },
+            "黄冈": {
+                "安徽": { base20: 33.6, extra21_100: 1.5, extra100: 1.2 },
+                "河南": { base20: 28.7, extra21_100: 1.5, extra100: 1.1 },
+                "湖北": { base20: 19.6, extra21_100: 1.1, extra100: 0.9 },
+                "湖南": { base20: 27.3, extra21_100: 1.3, extra100: 1.1 },
+                "江西": { base20: 28.0, extra21_100: 1.3, extra100: 1.1 },
+                "重庆": { base20: 35.0, extra21_100: 1.5, extra100: 1.3 }
+            },
+            "南昌": {
+                "安徽": { base20: 32.9, extra21_100: 1.6, extra100: 1.2 },
+                "福建": { base20: 35.7, extra21_100: 1.4, extra100: 1.2 },
+                "广东": { base20: 39.9, extra21_100: 1.4, extra100: 1.3 },
+                "湖北": { base20: 30.8, extra21_100: 1.4, extra100: 1.1 },
+                "湖南": { base20: 29.4, extra21_100: 1.4, extra100: 1.1 },
+                "江西": { base20: 16.8, extra21_100: 1.0, extra100: 0.8 },
+                "浙江": { base20: 35.0, extra21_100: 1.6, extra100: 1.2 }
+            },
+            "福州": {
+                "福建": { base20: 21.0, extra21_100: 1.2, extra100: 0.9 },
+                "广东": { base20: 37.8, extra21_100: 1.3, extra100: 1.1 },
+                "广西": { base20: 40.6, extra21_100: 1.9, extra100: 1.4 },
+                "浙江": { base20: 37.1, extra21_100: 1.8, extra100: 1.3 }
+            },
+            "肇庆": {
+                "福建": { base20: 35.7, extra21_100: 1.5, extra100: 1.3 },
+                "广东": { base20: 20.3, extra21_100: 1.1, extra100: 0.9 },
+                "广西": { base20: 44.1, extra21_100: 1.8, extra100: 1.5 },
+                "海南": { base20: 46.2, extra21_100: 1.6, extra100: 1.5 },
+                "湖南": { base20: 44.1, extra21_100: 1.5, extra100: 1.3 },
+                "江西": { base20: 43.4, extra21_100: 1.5, extra100: 1.3 }
+            },
+            "南宁": {
+                "广东": { base20: 32.9, extra21_100: 1.4, extra100: 1.1 },
+                "广西": { base20: 17.5, extra21_100: 1.0, extra100: 0.8 },
+                "贵州": { base20: 37.8, extra21_100: 1.8, extra100: 1.5 },
+                "海南": { base20: 37.8, extra21_100: 1.8, extra100: 1.5 },
+                "湖南": { base20: 37.8, extra21_100: 1.8, extra100: 1.5 },
+                "云南": { base20: 37.8, extra21_100: 1.8, extra100: 1.5 }
+            },
+            "贵州": {
+                "广西": { base20: 36.4, extra21_100: 1.8, extra100: 1.3 },
+                "贵州": { base20: 17.5, extra21_100: 1.0, extra100: 0.8 },
+                "湖南": { base20: 36.4, extra21_100: 1.6, extra100: 1.3 },
+                "四川": { base20: 32.9, extra21_100: 1.4, extra100: 1.2 },
+                "云南": { base20: 32.9, extra21_100: 1.5, extra100: 1.3 },
+                "重庆": { base20: 30.8, extra21_100: 1.4, extra100: 1.1 }
+            },
+            "重庆": {
+                "贵州": { base20: 25.2, extra21_100: 1.4, extra100: 1.1 },
+                "湖北": { base20: 36.4, extra21_100: 1.7, extra100: 1.3 },
+                "湖南": { base20: 33.6, extra21_100: 1.6, extra100: 1.2 },
+                "四川": { base20: 18.9, extra21_100: 1.0, extra100: 0.8 },
+                "重庆": { base20: 17.5, extra21_100: 1.0, extra100: 0.8 }
+            },
+            "惠州": {
+                "福建": { base20: 35.7, extra21_100: 1.5, extra100: 1.3 },
+                "广东": { base20: 20.3, extra21_100: 1.1, extra100: 0.9 },
+                "广西": { base20: 44.1, extra21_100: 1.8, extra100: 1.5 },
+                "湖南": { base20: 44.1, extra21_100: 1.5, extra100: 1.3 },
+                "江西": { base20: 43.4, extra21_100: 1.5, extra100: 1.3 }
+            },
+            "乌鲁木齐": {
+                "新疆": { base20: 25.2, extra21_100: 1.3, extra100: 1.1 },
+                "甘肃": { base20: 53.2, extra21_100: 2.0, extra100: 1.8 },
+                "青海": { base20: 55.3, extra21_100: 2.2, extra100: 2.1 }
+            }
+        };
+
+        // -------- 韵达 (仅南京→江浙沪皖) --------
+        const YD_DATA = {
+            "南京": {
+                "上海": { ranges: [{ min: 20, max: 39, price: 1.0 }, { min: 40, max: 199, price: 0.75 }, { min: 200,
+                        max: Infinity, price: 0.7 }] },
+                "江苏": { ranges: [{ min: 20, max: 39, price: 1.0 }, { min: 40, max: 100, price: 0.75 }, { min: 101,
+                        max: 500, price: 0.65 }, { min: 501, max: Infinity, price: 0.6 }] },
+                "浙江": { ranges: [{ min: 20, max: 39, price: 1.0 }, { min: 40, max: 100, price: 0.75 }, { min: 101,
+                        max: 500, price: 0.65 }, { min: 501, max: Infinity, price: 0.6 }] },
+                "安徽": { ranges: [{ min: 20, max: 39, price: 1.0 }, { min: 40, max: 100, price: 0.75 }, { min: 101,
+                        max: 500, price: 0.65 }, { min: 501, max: Infinity, price: 0.6 }] }
+            }
+        };
+
+        // -------- 德邦大票电商 (仅指定始发地) --------
+        const DB_DP_DATA = {
+            "南宁": {
+                "广西": { ranges: [{ min: 100, max: 199, price: 0.75 }, { min: 200, max: 499, price: 0.7 }, { min: 500,
+                        max: Infinity, price: 0.65 }] },
+                "广东": { ranges: [{ min: 100, max: 199, price: 1.1 }, { min: 200, max: 499, price: 1.0 }, { min: 500,
+                        max: Infinity, price: 1.0 }] },
+                "云南": { ranges: [{ min: 100, max: 199, price: 1.4 }, { min: 200, max: 499, price: 1.3 }, { min: 500,
+                        max: Infinity, price: 1.3 }] },
+                "贵州": { ranges: [{ min: 100, max: 199, price: 1.4 }, { min: 200, max: 499, price: 1.3 }, { min: 500,
+                        max: Infinity, price: 1.3 }] },
+                "海南": { ranges: [{ min: 100, max: 199, price: 1.3 }, { min: 200, max: 499, price: 1.3 }, { min: 500,
+                        max: Infinity, price: 1.3 }] },
+                "湖南": { ranges: [{ min: 100, max: 199, price: 1.3 }, { min: 200, max: 499, price: 1.3 }, { min: 500,
+                        max: Infinity, price: 1.3 }] }
+            },
+            "福州": {
+                "浙江": { ranges: [{ min: 100, max: 199, price: 1.05 }, { min: 200, max: 499, price: 1.0 }, { min: 500,
+                        max: Infinity, price: 1.0 }] },
+                "上海": { ranges: [{ min: 100, max: 199, price: 1.1 }, { min: 200, max: 499, price: 1.0 }, { min: 500,
+                        max: Infinity, price: 1.0 }] },
+                "广西": { ranges: [{ min: 100, max: 199, price: 1.8 }, { min: 200, max: 499, price: 1.6 }, { min: 500,
+                        max: Infinity, price: 1.4 }] },
+                "福建": { ranges: [{ min: 100, max: 199, price: 0.8 }, { min: 200, max: 499, price: 0.8 }, { min: 500,
+                        max: Infinity, price: 0.7 }] },
+                "广东": { ranges: [{ min: 100, max: 199, price: 1.0 }, { min: 200, max: 499, price: 1.0 }, { min: 500,
+                        max: Infinity, price: 0.8 }] }
+            },
+            "郑州": {
+                "江苏": { ranges: [{ min: 100, max: 199, price: 1.2 }, { min: 200, max: 499, price: 1.1 }, { min: 500,
+                        max: Infinity, price: 1.1 }] },
+                "浙江": { ranges: [{ min: 100, max: 199, price: 1.2 }, { min: 200, max: 499, price: 1.1 }, { min: 500,
+                        max: Infinity, price: 1.1 }] },
+                "上海": { ranges: [{ min: 100, max: 199, price: 1.1 }, { min: 200, max: 499, price: 1.0 }, { min: 500,
+                        max: Infinity, price: 1.0 }] },
+                "安徽": { ranges: [{ min: 100, max: 199, price: 1.1 }, { min: 200, max: 499, price: 1.0 }, { min: 500,
+                        max: Infinity, price: 1.0 }] },
+                "山东": { ranges: [{ min: 100, max: 199, price: 1.1 }, { min: 200, max: 499, price: 1.0 }, { min: 500,
+                        max: Infinity, price: 1.0 }] },
+                "北京": { ranges: [{ min: 100, max: 199, price: 1.1 }, { min: 200, max: 499, price: 1.0 }, { min: 500,
+                        max: Infinity, price: 1.0 }] },
+                "天津": { ranges: [{ min: 100, max: 199, price: 1.1 }, { min: 200, max: 499, price: 1.0 }, { min: 500,
+                        max: Infinity, price: 1.0 }] },
+                "河北": { ranges: [{ min: 100, max: 199, price: 1.0 }, { min: 200, max: 499, price: 0.9 }, { min: 500,
+                        max: Infinity, price: 0.9 }] },
+                "河南": { ranges: [{ min: 100, max: 199, price: 0.7 }, { min: 200, max: 499, price: 0.7 }, { min: 500,
+                        max: Infinity, price: 0.7 }] },
+                "湖北": { ranges: [{ min: 100, max: 199, price: 1.05 }, { min: 200, max: 499, price: 0.95 }, { min: 500,
+                        max: Infinity, price: 0.9 }] },
+                "湖南": { ranges: [{ min: 100, max: 199, price: 1.2 }, { min: 200, max: 499, price: 1.1 }, { min: 500,
+                        max: Infinity, price: 1.1 }] },
+                "江西": { ranges: [{ min: 100, max: 199, price: 1.1 }, { min: 200, max: 499, price: 1.0 }, { min: 500,
+                        max: Infinity, price: 1.0 }] },
+                "山西": { ranges: [{ min: 100, max: 199, price: 1.1 }, { min: 200, max: 499, price: 1.1 }, { min: 500,
+                        max: Infinity, price: 1.0 }] },
+                "福建": { ranges: [{ min: 100, max: 199, price: 1.2 }, { min: 200, max: 499, price: 1.2 }, { min: 500,
+                        max: Infinity, price: 1.1 }] },
+                "广东": { ranges: [{ min: 100, max: 199, price: 1.2 }, { min: 200, max: 499, price: 1.1 }, { min: 500,
+                        max: Infinity, price: 1.1 }] },
+                "广西": { ranges: [{ min: 100, max: 199, price: 1.6 }, { min: 200, max: 499, price: 1.4 }, { min: 500,
+                        max: Infinity, price: 1.3 }] },
+                "海南": { ranges: [{ min: 100, max: 199, price: 1.5 }, { min: 200, max: 499, price: 1.5 }, { min: 500,
+                        max: Infinity, price: 1.4 }] },
+                "云南": { ranges: [{ min: 100, max: 199, price: 1.6 }, { min: 200, max: 499, price: 1.6 }, { min: 500,
+                        max: Infinity, price: 1.4 }] },
+                "贵州": { ranges: [{ min: 100, max: 199, price: 1.4 }, { min: 200, max: 499, price: 1.3 }, { min: 500,
+                        max: Infinity, price: 1.3 }] },
+                "四川": { ranges: [{ min: 100, max: 199, price: 1.4 }, { min: 200, max: 499, price: 1.3 }, { min: 500,
+                        max: Infinity, price: 1.3 }] },
+                "重庆": { ranges: [{ min: 100, max: 199, price: 1.1 }, { min: 200, max: 499, price: 1.1 }, { min: 500,
+                        max: Infinity, price: 1.0 }] },
+                "黑龙江": { ranges: [{ min: 100, max: 199, price: 1.6 }, { min: 200, max: 499, price: 1.4 }, { min: 500,
+                        max: Infinity, price: 1.3 }] },
+                "吉林": { ranges: [{ min: 100, max: 199, price: 1.4 }, { min: 200, max: 499, price: 1.2 }, { min: 500,
+                        max: Infinity, price: 1.2 }] },
+                "辽宁": { ranges: [{ min: 100, max: 199, price: 1.3 }, { min: 200, max: 499, price: 1.3 }, { min: 500,
+                        max: Infinity, price: 1.2 }] },
+                "陕西": { ranges: [{ min: 100, max: 199, price: 1.1 }, { min: 200, max: 499, price: 1.0 }, { min: 500,
+                        max: Infinity, price: 1.0 }] },
+                "甘肃": { ranges: [{ min: 100, max: 199, price: 1.3 }, { min: 200, max: 499, price: 1.3 }, { min: 500,
+                        max: Infinity, price: 1.3 }] },
+                "宁夏": { ranges: [{ min: 100, max: 199, price: 1.4 }, { min: 200, max: 499, price: 1.3 }, { min: 500,
+                        max: Infinity, price: 1.3 }] },
+                "青海": { ranges: [{ min: 100, max: 199, price: 1.7 }, { min: 200, max: 499, price: 1.4 }, { min: 500,
+                        max: Infinity, price: 1.35 }] },
+                "内蒙古": { ranges: [{ min: 100, max: 199, price: 1.4 }, { min: 200, max: 499, price: 1.3 }, { min: 500,
+                        max: Infinity, price: 1.3 }] },
+                "新疆": { ranges: [{ min: 100, max: 199, price: 2.3 }, { min: 200, max: 499, price: 2.2 }, { min: 500,
+                        max: Infinity, price: 2.2 }] },
+                "西藏": { ranges: [{ min: 100, max: 199, price: 4.0 }, { min: 200, max: 499, price: 4.0 }, { min: 500,
+                        max: Infinity, price: 4.0 }] }
+            },
+            "西安": {
+                "陕西": { ranges: [{ min: 100, max: 199, price: 0.7 }, { min: 200, max: 499, price: 0.7 }, { min: 500,
+                        max: Infinity, price: 0.65 }] },
+                "山西": { ranges: [{ min: 100, max: 199, price: 1.3 }, { min: 200, max: 499, price: 1.3 }, { min: 500,
+                        max: Infinity, price: 1.2 }] },
+                "甘肃": { ranges: [{ min: 100, max: 199, price: 1.2 }, { min: 200, max: 499, price: 1.1 }, { min: 500,
+                        max: Infinity, price: 1.0 }] },
+                "宁夏": { ranges: [{ min: 100, max: 199, price: 1.15 }, { min: 200, max: 499, price: 1.0 }, { min: 500,
+                        max: Infinity, price: 1.0 }] },
+                "青海": { ranges: [{ min: 100, max: 199, price: 1.25 }, { min: 200, max: 499, price: 1.15 }, { min: 500,
+                        max: Infinity, price: 1.1 }] },
+                "内蒙古": { ranges: [{ min: 100, max: 199, price: 1.4 }, { min: 200, max: 499, price: 1.4 }, { min: 500,
+                        max: Infinity, price: 1.4 }] },
+                "新疆": { ranges: [{ min: 100, max: 199, price: 2.5 }, { min: 200, max: 499, price: 2.1 }, { min: 500,
+                        max: Infinity, price: 2.0 }] }
+            },
+            "重庆": {
+                "湖北": { ranges: [{ min: 100, max: 199, price: 1.3 }, { min: 200, max: 499, price: 1.2 }, { min: 500,
+                        max: Infinity, price: 1.1 }] },
+                "湖南": { ranges: [{ min: 100, max: 199, price: 1.3 }, { min: 200, max: 499, price: 1.2 }, { min: 500,
+                        max: Infinity, price: 1.1 }] },
+                "贵州": { ranges: [{ min: 100, max: 199, price: 1.1 }, { min: 200, max: 499, price: 1.0 }, { min: 500,
+                        max: Infinity, price: 0.9 }] },
+                "四川": { ranges: [{ min: 100, max: 199, price: 1.0 }, { min: 200, max: 499, price: 0.9 }, { min: 500,
+                        max: Infinity, price: 0.9 }] },
+                "重庆": { ranges: [{ min: 100, max: 199, price: 0.9 }, { min: 200, max: 499, price: 0.9 }, { min: 500,
+                        max: Infinity, price: 0.8 }] },
+                "陕西": { ranges: [{ min: 100, max: 199, price: 1.3 }, { min: 200, max: 499, price: 1.3 }, { min: 500,
+                        max: Infinity, price: 1.2 }] },
+                "西藏": { ranges: [{ min: 100, max: 199, price: 4.0 }, { min: 200, max: 499, price: 3.5 }, { min: 500,
+                        max: Infinity, price: 3.5 }] }
+            },
+            "保定": {
+                "河北": { ranges: [{ min: 100, max: 199, price: 0.8 }, { min: 200, max: 499, price: 0.75 }, { min: 500,
+                        max: Infinity, price: 0.7 }] },
+                "北京": { ranges: [{ min: 100, max: 199, price: 0.8 }, { min: 200, max: 499, price: 0.75 }, { min: 500,
+                        max: Infinity, price: 0.7 }] },
+                "天津": { ranges: [{ min: 100, max: 199, price: 0.8 }, { min: 200, max: 499, price: 0.75 }, { min: 500,
+                        max: Infinity, price: 0.7 }] },
+                "辽宁": { ranges: [{ min: 100, max: 199, price: 1.5 }, { min: 200, max: 499, price: 1.4 }, { min: 500,
+                        max: Infinity, price: 1.3 }] },
+                "黑龙江": { ranges: [{ min: 100, max: 199, price: 1.6 }, { min: 200, max: 499, price: 1.5 }, { min: 500,
+                        max: Infinity, price: 1.4 }] },
+                "山西": { ranges: [{ min: 100, max: 199, price: 1.1 }, { min: 200, max: 499, price: 1.1 }, { min: 500,
+                        max: Infinity, price: 1.0 }] },
+                "吉林": { ranges: [{ min: 100, max: 199, price: 1.5 }, { min: 200, max: 499, price: 1.4 }, { min: 500,
+                        max: Infinity, price: 1.3 }] },
+                "内蒙古": { ranges: [{ min: 100, max: 199, price: 1.3 }, { min: 200, max: 499, price: 1.3 }, { min: 500,
+                        max: Infinity, price: 1.2 }] }
+            }
+        };
+
+        // -------- 德邦重货特惠 (仅指定始发地，移除南京) --------
+        const DB_ZH_DATA = {
+            "郑州": {
+                "河南": { first20: 16.8, extra: 0.8 },
+                "江苏": { first20: 27.0, extra: 1.2 },
+                "浙江": { first20: 27.0, extra: 1.2 },
+                "上海": { first20: 27.0, extra: 1.2 },
+                "安徽": { first20: 27.0, extra: 1.2 },
+                "山东": { first20: 27.0, extra: 1.2 },
+                "北京": { first20: 27.0, extra: 1.2 },
+                "天津": { first20: 27.0, extra: 1.2 },
+                "河北": { first20: 27.0, extra: 1.2 },
+                "湖北": { first20: 27.0, extra: 1.2 },
+                "湖南": { first20: 27.0, extra: 1.2 },
+                "江西": { first20: 27.0, extra: 1.2 },
+                "山西": { first20: 27.0, extra: 1.2 },
+                "福建": { first20: 27.0, extra: 1.2 },
+                "广东": { first20: 27.0, extra: 1.2 },
+                "广西": { first20: 27.0, extra: 1.2 },
+                "海南": { first20: 48.0, extra: 2.4 },
+                "云南": { first20: 33.0, extra: 1.6 },
+                "贵州": { first20: 30.0, extra: 1.6 },
+                "四川": { first20: 30.0, extra: 1.6 },
+                "重庆": { first20: 30.0, extra: 1.6 },
+                "黑龙江": { first20: 48.0, extra: 2.4 },
+                "吉林": { first20: 48.0, extra: 2.4 },
+                "辽宁": { first20: 32.0, extra: 1.6 },
+                "陕西": { first20: 27.0, extra: 1.2 },
+                "甘肃": { first20: 31.0, extra: 1.4 },
+                "宁夏": { first20: 31.0, extra: 1.4 },
+                "青海": { first20: 31.0, extra: 1.4 },
+                "内蒙古": { first20: 34.0, extra: 1.6 },
+                "新疆": { first20: 84.0, extra: 4.2 },
+                "西藏": { first20: 140.0, extra: 7.0 }
+            },
+            "福州": {
+                "浙江": { first20: 30.0, extra: 1.3 },
+                "上海": { first20: 30.0, extra: 1.3 },
+                "广西": { first20: 36.0, extra: 1.7 },
+                "福建": { first20: 18.0, extra: 0.9 },
+                "广东": { first20: 30.0, extra: 1.3 }
+            },
+            "西安": {
+                "陕西": { first20: 19.0, extra: 0.9 },
+                "山西": { first20: 28.0, extra: 1.3 },
+                "甘肃": { first20: 30.0, extra: 1.4 },
+                "宁夏": { first20: 30.0, extra: 1.4 },
+                "青海": { first20: 30.0, extra: 1.4 },
+                "内蒙古": { first20: 30.0, extra: 1.4 },
+                "新疆": { first20: 56.0, extra: 2.8 }
+            },
+            "重庆": {
+                "湖北": { first20: 35.0, extra: 1.6 },
+                "湖南": { first20: 35.0, extra: 1.6 },
+                "贵州": { first20: 35.0, extra: 1.6 },
+                "四川": { first20: 30.0, extra: 1.2 },
+                "重庆": { first20: 30.0, extra: 1.1 },
+                "陕西": { first20: 35.0, extra: 1.6 },
+                "西藏": { first20: 140.0, extra: 7.0 }
+            },
+            "保定": {
+                "河北": { first20: 19.0, extra: 0.9 },
+                "北京": { first20: 19.0, extra: 0.9 },
+                "天津": { first20: 19.0, extra: 0.9 },
+                "辽宁": { first20: 31.0, extra: 1.5 },
+                "黑龙江": { first20: 33.0, extra: 1.6 },
+                "山西": { first20: 24.0, extra: 1.2 },
+                "吉林": { first20: 31.0, extra: 1.5 },
+                "内蒙古": { first20: 42.0, extra: 2.0 }
+            },
+            "南宁": {
+                "广西": { first20: 18.0, extra: 0.9 },
+                "广东": { first20: 31.0, extra: 1.3 },
+                "云南": { first20: 28.0, extra: 1.3 },
+                "贵州": { first20: 31.0, extra: 1.3 },
+                "海南": { first20: 36.0, extra: 1.6 },
+                "湖南": { first20: 31.0, extra: 1.3 }
+            }
+        };
+
+        // -------- 德邦大件360 (仅保留指定始发地: 福建、广西、河北、河南、陕西、重庆) --------
+        const DB_XJ_DATA = {
+            "福建": {
+                "江苏": { first3: 10.01, extra: 1.99 },
+                "浙江": { first3: 10.01, extra: 1.99 },
+                "上海": { first3: 12.01, extra: 2.49 },
+                "安徽": { first3: 12.01, extra: 2.49 },
+                "山东": { first3: 12.01, extra: 2.49 },
+                "北京": { first3: 12.01, extra: 2.49 },
+                "天津": { first3: 12.01, extra: 2.49 },
+                "河北": { first3: 12.01, extra: 2.49 },
+                "河南": { first3: 12.01, extra: 2.49 },
+                "湖北": { first3: 12.01, extra: 2.49 },
+                "湖南": { first3: 12.01, extra: 2.49 },
+                "江西": { first3: 10.01, extra: 1.99 },
+                "山西": { first3: 12.01, extra: 2.49 },
+                "福建": { first3: 8.01, extra: 1.01 },
+                "广东": { first3: 12.01, extra: 2.49 },
+                "广西": { first3: 12.01, extra: 2.49 },
+                "海南": { first3: 12.01, extra: 2.49 },
+                "云南": { first3: 12.01, extra: 2.49 },
+                "贵州": { first3: 12.01, extra: 2.49 },
+                "四川": { first3: 12.01, extra: 2.49 },
+                "重庆": { first3: 12.01, extra: 2.49 },
+                "黑龙江": { first3: 15.01, extra: 3.99 },
+                "吉林": { first3: 15.01, extra: 3.99 },
+                "辽宁": { first3: 15.01, extra: 3.99 },
+                "陕西": { first3: 12.01, extra: 2.49 },
+                "甘肃": { first3: 15.01, extra: 3.99 },
+                "宁夏": { first3: 15.01, extra: 3.99 },
+                "青海": { first3: 15.01, extra: 3.99 },
+                "内蒙古": { first3: 15.01, extra: 3.99 },
+                "新疆": { first3: 25.01, extra: 5.99 },
+                "西藏": { first3: 25.01, extra: 7.99 }
+            },
+            "广西": {
+                "江苏": { first3: 12.01, extra: 2.49 },
+                "浙江": { first3: 12.01, extra: 2.49 },
+                "上海": { first3: 12.01, extra: 2.49 },
+                "安徽": { first3: 12.01, extra: 2.49 },
+                "山东": { first3: 12.01, extra: 2.49 },
+                "北京": { first3: 12.01, extra: 2.49 },
+                "天津": { first3: 12.01, extra: 2.49 },
+                "河北": { first3: 12.01, extra: 2.49 },
+                "河南": { first3: 12.01, extra: 2.49 },
+                "湖北": { first3: 12.01, extra: 2.49 },
+                "湖南": { first3: 12.01, extra: 2.49 },
+                "江西": { first3: 10.01, extra: 1.99 },
+                "山西": { first3: 12.01, extra: 2.49 },
+                "福建": { first3: 10.01, extra: 1.99 },
+                "广东": { first3: 10.01, extra: 1.99 },
+                "广西": { first3: 8.01, extra: 1.01 },
+                "海南": { first3: 12.01, extra: 2.49 },
+                "云南": { first3: 10.01, extra: 1.99 },
+                "贵州": { first3: 10.01, extra: 1.99 },
+                "四川": { first3: 12.01, extra: 2.49 },
+                "重庆": { first3: 12.01, extra: 2.49 },
+                "黑龙江": { first3: 16.01, extra: 3.59 },
+                "吉林": { first3: 16.01, extra: 3.59 },
+                "辽宁": { first3: 16.01, extra: 3.59 },
+                "陕西": { first3: 12.01, extra: 2.49 },
+                "甘肃": { first3: 15.01, extra: 2.99 },
+                "宁夏": { first3: 16.01, extra: 3.59 },
+                "青海": { first3: 16.01, extra: 3.59 },
+                "内蒙古": { first3: 16.01, extra: 3.59 },
+                "新疆": { first3: 25.01, extra: 5.99 },
+                "西藏": { first3: 25.01, extra: 7.99 }
+            },
+            "河北": {
+                "江苏": { first3: 10.01, extra: 1.99 },
+                "浙江": { first3: 10.01, extra: 1.99 },
+                "上海": { first3: 10.01, extra: 1.99 },
+                "安徽": { first3: 10.01, extra: 1.99 },
+                "山东": { first3: 10.01, extra: 1.99 },
+                "北京": { first3: 8.01, extra: 1.01 },
+                "天津": { first3: 8.01, extra: 1.01 },
+                "河北": { first3: 8.01, extra: 1.01 },
+                "河南": { first3: 10.01, extra: 1.99 },
+                "湖北": { first3: 10.01, extra: 1.99 },
+                "湖南": { first3: 10.01, extra: 1.99 },
+                "江西": { first3: 10.01, extra: 1.99 },
+                "山西": { first3: 10.01, extra: 1.99 },
+                "福建": { first3: 10.01, extra: 1.99 },
+                "广东": { first3: 12.01, extra: 2.49 },
+                "广西": { first3: 12.01, extra: 2.49 },
+                "海南": { first3: 13.01, extra: 2.99 },
+                "云南": { first3: 12.01, extra: 2.49 },
+                "贵州": { first3: 12.01, extra: 2.49 },
+                "四川": { first3: 12.01, extra: 2.49 },
+                "重庆": { first3: 12.01, extra: 2.49 },
+                "黑龙江": { first3: 13.01, extra: 2.99 },
+                "吉林": { first3: 12.01, extra: 2.49 },
+                "辽宁": { first3: 12.01, extra: 2.49 },
+                "陕西": { first3: 10.01, extra: 1.99 },
+                "甘肃": { first3: 12.01, extra: 2.49 },
+                "宁夏": { first3: 12.01, extra: 2.49 },
+                "青海": { first3: 12.01, extra: 2.49 },
+                "内蒙古": { first3: 13.01, extra: 2.99 },
+                "新疆": { first3: 25.01, extra: 5.99 },
+                "西藏": { first3: 25.01, extra: 7.99 }
+            },
+            "河南": {
+                "江苏": { first3: 10.01, extra: 1.99 },
+                "浙江": { first3: 10.01, extra: 1.99 },
+                "上海": { first3: 10.01, extra: 1.99 },
+                "安徽": { first3: 10.01, extra: 1.99 },
+                "山东": { first3: 10.01, extra: 1.99 },
+                "北京": { first3: 10.01, extra: 2.49 },
+                "天津": { first3: 10.01, extra: 1.99 },
+                "河北": { first3: 10.01, extra: 1.99 },
+                "河南": { first3: 8.01, extra: 1.01 },
+                "湖北": { first3: 10.01, extra: 1.99 },
+                "湖南": { first3: 10.01, extra: 1.99 },
+                "江西": { first3: 10.01, extra: 1.99 },
+                "山西": { first3: 10.01, extra: 1.99 },
+                "福建": { first3: 10.01, extra: 1.99 },
+                "广东": { first3: 12.01, extra: 2.49 },
+                "广西": { first3: 12.01, extra: 2.49 },
+                "海南": { first3: 13.01, extra: 2.99 },
+                "云南": { first3: 12.01, extra: 2.49 },
+                "贵州": { first3: 12.01, extra: 2.49 },
+                "四川": { first3: 12.01, extra: 2.49 },
+                "重庆": { first3: 12.01, extra: 2.49 },
+                "黑龙江": { first3: 13.01, extra: 2.99 },
+                "吉林": { first3: 12.01, extra: 2.49 },
+                "辽宁": { first3: 12.01, extra: 2.49 },
+                "陕西": { first3: 10.01, extra: 1.99 },
+                "甘肃": { first3: 12.01, extra: 2.49 },
+                "宁夏": { first3: 12.01, extra: 2.49 },
+                "青海": { first3: 12.01, extra: 2.49 },
+                "内蒙古": { first3: 13.01, extra: 2.99 },
+                "新疆": { first3: 25.01, extra: 5.99 },
+                "西藏": { first3: 25.01, extra: 7.99 }
+            },
+            "陕西": {
+                "江苏": { first3: 10.01, extra: 1.99 },
+                "浙江": { first3: 10.01, extra: 1.99 },
+                "上海": { first3: 10.01, extra: 1.99 },
+                "安徽": { first3: 10.01, extra: 1.99 },
+                "山东": { first3: 10.01, extra: 1.99 },
+                "北京": { first3: 10.01, extra: 2.49 },
+                "天津": { first3: 10.01, extra: 1.99 },
+                "河北": { first3: 10.01, extra: 1.99 },
+                "河南": { first3: 10.01, extra: 1.99 },
+                "湖北": { first3: 10.01, extra: 1.99 },
+                "湖南": { first3: 10.01, extra: 1.99 },
+                "江西": { first3: 10.01, extra: 1.99 },
+                "山西": { first3: 10.01, extra: 1.99 },
+                "福建": { first3: 10.01, extra: 1.99 },
+                "广东": { first3: 12.01, extra: 2.49 },
+                "广西": { first3: 12.01, extra: 2.49 },
+                "海南": { first3: 13.01, extra: 2.99 },
+                "云南": { first3: 12.01, extra: 2.49 },
+                "贵州": { first3: 12.01, extra: 2.49 },
+                "四川": { first3: 12.01, extra: 2.49 },
+                "重庆": { first3: 12.01, extra: 2.49 },
+                "黑龙江": { first3: 13.01, extra: 2.99 },
+                "吉林": { first3: 12.01, extra: 2.49 },
+                "辽宁": { first3: 12.01, extra: 2.49 },
+                "陕西": { first3: 8.01, extra: 1.01 },
+                "甘肃": { first3: 12.01, extra: 2.49 },
+                "宁夏": { first3: 12.01, extra: 2.49 },
+                "青海": { first3: 12.01, extra: 2.49 },
+                "内蒙古": { first3: 13.01, extra: 2.99 },
+                "新疆": { first3: 25.01, extra: 5.99 },
+                "西藏": { first3: 25.01, extra: 7.99 }
+            },
+            "重庆": {
+                "江苏": { first3: 12.01, extra: 2.49 },
+                "浙江": { first3: 12.01, extra: 2.49 },
+                "上海": { first3: 12.01, extra: 2.49 },
+                "安徽": { first3: 12.01, extra: 2.49 },
+                "山东": { first3: 10.01, extra: 1.99 },
+                "北京": { first3: 12.01, extra: 2.49 },
+                "天津": { first3: 10.01, extra: 1.99 },
+                "河北": { first3: 10.01, extra: 1.99 },
+                "河南": { first3: 10.01, extra: 1.99 },
+                "湖北": { first3: 10.01, extra: 1.99 },
+                "湖南": { first3: 10.01, extra: 1.99 },
+                "江西": { first3: 10.01, extra: 1.99 },
+                "山西": { first3: 10.01, extra: 1.99 },
+                "福建": { first3: 12.01, extra: 2.49 },
+                "广东": { first3: 12.01, extra: 2.49 },
+                "广西": { first3: 12.01, extra: 2.49 },
+                "海南": { first3: 13.01, extra: 2.99 },
+                "云南": { first3: 12.01, extra: 2.49 },
+                "贵州": { first3: 10.01, extra: 1.99 },
+                "四川": { first3: 8.01, extra: 1.01 },
+                "重庆": { first3: 8.01, extra: 1.01 },
+                "黑龙江": { first3: 16.01, extra: 4.99 },
+                "吉林": { first3: 16.01, extra: 4.99 },
+                "辽宁": { first3: 16.01, extra: 4.99 },
+                "陕西": { first3: 10.01, extra: 1.99 },
+                "甘肃": { first3: 12.01, extra: 2.49 },
+                "宁夏": { first3: 12.01, extra: 2.49 },
+                "青海": { first3: 12.01, extra: 2.49 },
+                "内蒙古": { first3: 15.01, extra: 2.99 },
+                "新疆": { first3: 25.01, extra: 5.99 },
+                "西藏": { first3: 25.01, extra: 7.99 }
+            }
+        };
+
+        // -------- 跨越速运 (仅保留本省市、江浙沪皖、京津冀) --------
+        const KY_DATA = {
+            "同城": {
+                "青岛": { "青岛市": { base20: 18, extra1_20: 1.0, extra20_100: 1.0, extra100: 0.9 } },
+                "乌鲁木齐": { "乌鲁木齐市": { base20: 23, extra1_20: 1.3, extra20_100: 1.3, extra100: 1.2 } },
+                "保定": { "保定市": { base20: 22, extra1_20: 1.3, extra20_100: 1.3, extra100: 1.3 } },
+                "福州": { "福州市": { base20: 20, extra1_20: 1.1, extra20_100: 1.1, extra100: 1.0 } },
+                "湖州": { "湖州市": { base20: 20, extra1_20: 1.1, extra20_100: 1.1, extra100: 0.9 } },
+                "黄冈": { "黄冈市": { base20: 18, extra1_20: 1.1, extra20_100: 1.1, extra100: 1.0 } },
+                "南昌": { "南昌市": { base20: 16, extra1_20: 1.0, extra20_100: 1.0, extra100: 0.9 } },
+                "南京": { "南京市": { base20: 18, extra1_20: 1.1, extra20_100: 1.1, extra100: 0.8 } },
+                "肇庆": { "肇庆市": { base20: 20, extra1_20: 1.1, extra20_100: 1.1, extra100: 1.0 } },
+                "惠州": { "惠州市": { base20: 20, extra1_20: 1.1, extra20_100: 1.1, extra100: 1.0 } }
+            },
+            "省内": {
+                "保定": { "北京市": { base20: 22, extra1_20: 1.3, extra20_100: 1.3, extra100: 1.3 },
+                    "天津市": { base20: 22, extra1_20: 1.3, extra20_100: 1.3, extra100: 1.3 },
+                    "河北省保定以外地市": { base20: 22, extra1_20: 1.3, extra20_100: 1.3, extra100: 1.3 } },
+                "福州": { "福建省福州以外地市": { base20: 20, extra1_20: 1.1, extra20_100: 1.1, extra100: 1.0 } },
+                "湖州": { "浙江省湖州以外地市": { base20: 20, extra1_20: 1.1, extra20_100: 1.1, extra100: 0.9 },
+                    "上海市": { base20: 20, extra1_20: 1.1, extra20_100: 1.1, extra100: 0.9 },
+                    "江苏省": { base20: 18, extra1_20: 1.1, extra20_100: 1.1, extra100: 0.8 },
+                    "安徽省": { base20: 20, extra1_20: 1.1, extra20_100: 1.1, extra100: 0.9 } },
+                "黄冈": { "湖北省黄冈以外地市": { base20: 19, extra1_20: 1.1, extra20_100: 1.1, extra100: 1.0 } },
+                "南京": { "浙江省": { base20: 20, extra1_20: 1.1, extra20_100: 1.1, extra100: 0.9 },
+                    "上海市": { base20: 20, extra1_20: 1.1, extra20_100: 1.1, extra100: 0.9 },
+                    "江苏省南京以外地市": { base20: 18, extra1_20: 1.1, extra20_100: 1.1, extra100: 0.8 },
+                    "安徽省": { base20: 20, extra1_20: 1.1, extra20_100: 1.1, extra100: 0.9 } },
+                "青岛": { "德州市": { base20: 18, extra1_20: 1.0, extra20_100: 1.0, extra100: 0.8 },
+                    "烟台市": { base20: 18, extra1_20: 1.0, extra20_100: 1.0, extra100: 0.8 },
+                    "威海市": { base20: 18, extra1_20: 1.0, extra20_100: 1.0, extra100: 0.8 },
+                    "淄博市": { base20: 18, extra1_20: 1.0, extra20_100: 1.0, extra100: 0.8 },
+                    "济南市": { base20: 18, extra1_20: 1.0, extra20_100: 1.0, extra100: 0.8 },
+                    "泰安市": { base20: 18, extra1_20: 1.0, extra20_100: 1.0, extra100: 0.8 },
+                    "潍坊市": { base20: 18, extra1_20: 1.0, extra20_100: 1.0, extra100: 0.8 } },
+                "惠州": { "深圳市": { base20: 20, extra1_20: 1.1, extra20_100: 1.1, extra100: 1.0 },
+                    "江门市": { base20: 20, extra1_20: 1.1, extra20_100: 1.1, extra100: 1.0 },
+                    "中山市": { base20: 20, extra1_20: 1.1, extra20_100: 1.1, extra100: 1.0 },
+                    "东莞市": { base20: 20, extra1_20: 1.1, extra20_100: 1.1, extra100: 1.0 },
+                    "肇庆市": { base20: 20, extra1_20: 1.1, extra20_100: 1.1, extra100: 1.0 },
+                    "珠海市": { base20: 20, extra1_20: 1.1, extra20_100: 1.1, extra100: 1.0 },
+                    "广州市": { base20: 20, extra1_20: 1.1, extra20_100: 1.1, extra100: 1.0 },
+                    "佛山市": { base20: 20, extra1_20: 1.1, extra20_100: 1.1, extra100: 1.0 },
+                    "汕头市": { base20: 20, extra1_20: 1.1, extra20_100: 1.1, extra100: 1.0 },
+                    "河源市": { base20: 20, extra1_20: 1.1, extra20_100: 1.1, extra100: 1.0 },
+                    "清远市": { base20: 20, extra1_20: 1.1, extra20_100: 1.1, extra100: 1.0 } },
+                "肇庆": { "广东省肇庆、茂名以外地市": { base20: 20, extra1_20: 1.1, extra20_100: 1.1,
+                        extra100: 1.0 } },
+                "南昌": { "江西省南昌以外地市": { base20: 18, extra1_20: 1.1, extra20_100: 1.1, extra100: 1.0 } }
+            },
+            // 隔日达：仅保留本省、江浙沪皖、京津冀，其他跨省已删除
+            "隔日": {
+                "沈阳": { "天津市": { base20: 28, extra1_20: 1.4, extra20_100: 1.4, extra100: 1.2 },
+                    "廊坊市": { base20: 28, extra1_20: 1.4, extra20_100: 1.4, extra100: 1.2 },
+                    "北京市": { base20: 28, extra1_20: 1.4, extra20_100: 1.4, extra100: 1.2 } },
+                "保定": { "辽宁省": { base20: 36, extra1_20: 1.7, extra20_100: 1.7, extra100: 1.6 } },
+                "重庆": { "贵州省": { base20: 30, extra1_20: 1.4, extra20_100: 1.4, extra100: 1.2 },
+                    "湖南省": { base20: 33, extra1_20: 1.6, extra20_100: 1.6, extra100: 1.4 },
+                    "湖北省": { base20: 36, extra1_20: 1.7, extra20_100: 1.7, extra100: 1.5 } },
+                "福州": { "广西": { base20: 40, extra1_20: 2.1, extra20_100: 2.1, extra100: 1.6 },
+                    "浙江省": { base20: 37, extra1_20: 2.1, extra20_100: 2.1, extra100: 1.5 },
+                    "江苏省": { base20: 37, extra1_20: 2.1, extra20_100: 2.1, extra100: 1.5 } },
+                "郑州": { "湖南省": { base20: 30, extra1_20: 1.4, extra20_100: 1.4, extra100: 1.3 },
+                    "安徽省": { base20: 28, extra1_20: 1.3, extra20_100: 1.3, extra100: 1.2 },
+                    "河北省石家庄市": { base20: 28, extra1_20: 1.3, extra20_100: 1.3, extra100: 1.1 } },
+                "南宁": { "海南省": { base20: 37, extra1_20: 1.8, extra20_100: 1.8, extra100: 1.6 },
+                    "湖南省": { base20: 37, extra1_20: 1.8, extra20_100: 1.8, extra100: 1.6 } },
+                "西安": { "重庆市": { base20: 35, extra1_20: 1.5, extra20_100: 1.5, extra100: 1.4 },
+                    "山西省": { base20: 35, extra1_20: 1.8, extra20_100: 1.8, extra100: 1.6 } },
+                "黄冈": { "江西省": { base20: 28, extra1_20: 1.3, extra20_100: 1.3, extra100: 1.2 },
+                    "湖南省": { base20: 27, extra1_20: 1.3, extra20_100: 1.3, extra100: 1.2 },
+                    "安徽省": { base20: 33, extra1_20: 1.5, extra20_100: 1.5, extra100: 1.3 },
+                    "河南省": { base20: 28, extra1_20: 1.5, extra20_100: 1.5, extra100: 1.3 } },
+                "南昌": { "福建省": { base20: 35, extra1_20: 1.4, extra20_100: 1.4, extra100: 1.2 },
+                    "浙江省": { base20: 35, extra1_20: 1.6, extra20_100: 1.6, extra100: 1.4 },
+                    "江苏省": { base20: 35, extra1_20: 1.6, extra20_100: 1.6, extra100: 1.4 },
+                    "湖南省": { base20: 29, extra1_20: 1.4, extra20_100: 1.4, extra100: 1.2 },
+                    "湖北省": { base20: 30, extra1_20: 1.4, extra20_100: 1.4, extra100: 1.2 },
+                    "广东省": { base20: 39, extra1_20: 1.4, extra20_100: 1.4, extra100: 1.3 },
+                    "安徽省": { base20: 32, extra1_20: 1.6, extra20_100: 1.6, extra100: 1.4 } },
+                "青岛": { "江苏省": { base20: 28, extra1_20: 1.4, extra20_100: 1.4, extra100: 1.2 },
+                    "天津市": { base20: 30, extra1_20: 1.5, extra20_100: 1.5, extra100: 1.3 } },
+                "惠州": { "广西": { base20: 44, extra1_20: 1.8, extra20_100: 1.8, extra100: 1.6 },
+                    "福建省": { base20: 35, extra1_20: 1.5, extra20_100: 1.5, extra100: 1.4 },
+                    "江西省": { base20: 43, extra1_20: 1.5, extra20_100: 1.5, extra100: 1.4 },
+                    "湖南省": { base20: 44, extra1_20: 1.5, extra20_100: 1.5, extra100: 1.4 } },
+                "肇庆": { "广西": { base20: 44, extra1_20: 1.8, extra20_100: 1.8, extra100: 1.6 },
+                    "福建省": { base20: 35, extra1_20: 1.5, extra20_100: 1.5, extra100: 1.4 },
+                    "湖南省": { base20: 44, extra1_20: 1.5, extra20_100: 1.5, extra100: 1.4 } }
+            }
+        };
+
+        // ============================================================
+        //  3. 计算函数 (不变)
+        // ============================================================
+
+        function calcSF(rule, weight) {
+            if (!rule) return Infinity;
+            const { base20, extra21_100, extra100 } = rule;
+            if (weight <= 20) return base20;
+            if (weight <= 100) return base20 + (weight - 20) * extra21_100;
+            return base20 + 80 * extra21_100 + (weight - 100) * extra100;
+        }
+
+        function calcYD(rule, weight) {
+            if (!rule || !rule.ranges) return Infinity;
+            for (const r of rule.ranges) {
+                if (weight >= r.min && weight <= r.max) return weight * r.price;
+            }
+            return Infinity;
+        }
+
+        function calcDB_DP(rule, weight) {
+            if (!rule || !rule.ranges || weight < 100) return Infinity;
+            for (const r of rule.ranges) {
+                if (weight >= r.min && weight <= r.max) return weight * r.price;
+            }
+            return Infinity;
+        }
+
+        function calcDB_ZH(rule, weight) {
+            if (!rule) return Infinity;
+            const { first20, extra } = rule;
+            if (weight <= 20) return first20;
+            return first20 + (weight - 20) * extra;
+        }
+
+        function calcDB_XJ(rule, weight) {
+            if (!rule) return Infinity;
+            const { first3, extra } = rule;
+            if (weight <= 3) return first3;
+            return first3 + (weight - 3) * extra;
+        }
+
+        function calcKY(rule, weight) {
+            if (!rule) return Infinity;
+            const { base20, extra1_20, extra20_100, extra100 } = rule;
+            if (weight <= 20) return base20;
+            if (weight <= 40) return base20 + (weight - 20) * extra1_20;
+            if (weight <= 120) return base20 + 20 * extra1_20 + (weight - 40) * extra20_100;
+            return base20 + 20 * extra1_20 + 80 * extra20_100 + (weight - 120) * extra100;
+        }
+
+        // ============================================================
+        //  4. 匹配与查询 (包含跨越跨省过滤)
+        // ============================================================
+
+        function normalizeDest(input) {
+            const key = input.trim();
+            if (DEST_MAP[key]) return DEST_MAP[key];
+            const sortedKeys = Object.keys(DEST_MAP).sort((a, b) => b.length - a.length);
+            for (const k of sortedKeys) {
+                if (k.includes(key) || key.includes(k)) {
+                    return DEST_MAP[k];
+                }
+                const cleanK = k.replace(/[省市自治州地区县区]/g, '');
+                const cleanKey = key.replace(/[省市自治州地区县区]/g, '');
+                if (cleanK.includes(cleanKey) || cleanKey.includes(cleanK)) {
+                    return DEST_MAP[k];
+                }
+            }
+            return key;
+        }
+
+        function matchDest(destStr, destMap) {
+            if (!destStr || !destMap) return null;
+            const s = destStr.trim();
+            if (destMap[s]) return s;
+            const sortedKeys = Object.keys(destMap).sort((a, b) => b.length - a.length);
+            for (const key of sortedKeys) {
+                if (key.includes(s) || s.includes(key)) return key;
+                const cleanKey = key.replace(/[省市自治州地区县区]/g, '');
+                const cleanS = s.replace(/[省市自治州地区县区]/g, '');
+                if (cleanKey.includes(cleanS) || cleanS.includes(cleanKey)) return key;
+            }
+            return null;
+        }
+
+        function getSuggestions(input) {
+            if (!input || input.length < 1) return [];
+            const s = input.trim();
+            const results = [];
+            const sortedKeys = Object.keys(DEST_MAP).sort((a, b) => b.length - a.length);
+            for (const key of sortedKeys) {
+                if (key.includes(s) || s.includes(key) ||
+                    key.replace(/[省市自治州地区县区]/g, '').includes(s.replace(/[省市自治州地区县区]/g, ''))) {
+                    results.push({ display: key, dest: DEST_MAP[key] });
+                }
+                if (results.length >= 15) break;
+            }
+            const seen = new Set();
+            return results.filter(r => {
+                const uid = r.display + r.dest;
+                if (seen.has(uid)) return false;
+                seen.add(uid);
+                return true;
+            });
+        }
+
+        // ---- 跨越跨省过滤 ----
+        const YRD = new Set(['江苏', '浙江', '上海', '安徽']);
+        const JJJ = new Set(['北京', '天津', '河北']);
+
+        function isAllowedKY(originProv, destProv) {
+            if (!originProv || !destProv) return false;
+            if (originProv === destProv) return true;
+            if (YRD.has(originProv) && YRD.has(destProv)) return true;
+            if (JJJ.has(originProv) && JJJ.has(destProv)) return true;
+            return false;
+        }
+
+        function queryAll(dest, weight) {
+            const results = [];
+            const w = parseFloat(weight);
+            if (!dest || isNaN(w) || w < 0.5) return results;
+
+            const normalized = normalizeDest(dest);
+
+            // 顺丰
+            for (const [origin, destMap] of Object.entries(SF_DATA)) {
+                const matched = matchDest(normalized, destMap);
+                if (matched) {
+                    const price = calcSF(destMap[matched], w);
+                    if (isFinite(price)) {
+                        results.push({
+                            carrier: '顺丰',
+                            origin: origin,
+                            dest: matched,
+                            price: Math.round(price * 100) / 100,
+                            raw: price,
+                            type: '顺丰'
+                        });
+                    }
+                }
+            }
+
+            // 韵达
+            for (const [origin, destMap] of Object.entries(YD_DATA)) {
+                const matched = matchDest(normalized, destMap);
+                if (matched) {
+                    const price = calcYD(destMap[matched], w);
+                    if (isFinite(price) && w >= 20) {
+                        results.push({
+                            carrier: '韵达快运',
+                            origin: origin,
+                            dest: matched,
+                            price: Math.round(price * 100) / 100,
+                            raw: price,
+                            type: '韵达'
+                        });
+                    }
+                }
+            }
+
+            // 德邦大票电商 (100kg+)
+            if (w >= 100) {
+                for (const [origin, destMap] of Object.entries(DB_DP_DATA)) {
+                    const matched = matchDest(normalized, destMap);
+                    if (matched) {
+                        const price = calcDB_DP(destMap[matched], w);
+                        if (isFinite(price)) {
+                            results.push({
+                                carrier: '德邦大票电商',
+                                origin: origin,
+                                dest: matched,
+                                price: Math.round(price * 100) / 100,
+                                raw: price,
+                                type: '德邦大票'
+                            });
+                        }
+                    }
+                }
+            }
+
+            // 德邦重货特惠
+            for (const [origin, destMap] of Object.entries(DB_ZH_DATA)) {
+                const matched = matchDest(normalized, destMap);
+                if (matched) {
+                    const price = calcDB_ZH(destMap[matched], w);
+                    if (isFinite(price)) {
+                        results.push({
+                            carrier: '德邦重货特惠',
+                            origin: origin,
+                            dest: matched,
+                            price: Math.round(price * 100) / 100,
+                            raw: price,
+                            type: '德邦重货'
+                        });
+                    }
+                }
+            }
+
+            // 德邦大件360
+            for (const [origin, destMap] of Object.entries(DB_XJ_DATA)) {
+                const matched = matchDest(normalized, destMap);
+                if (matched) {
+                    const price = calcDB_XJ(destMap[matched], w);
+                    if (isFinite(price)) {
+                        results.push({
+                            carrier: '德邦大件360',
+                            origin: origin,
+                            dest: matched,
+                            price: Math.round(price * 100) / 100,
+                            raw: price,
+                            type: '德邦小件'
+                        });
+                    }
+                }
+            }
+
+            // 跨越速运 (增加跨省过滤)
+            for (const [mode, origins] of Object.entries(KY_DATA)) {
+                for (const [origin, destMap] of Object.entries(origins)) {
+                    const matched = matchDest(normalized, destMap);
+                    if (matched) {
+                        // 获取始发地省份和目的地省份
+                        const originProv = DEST_MAP[origin] || origin;
+                        const destProv = DEST_MAP[matched] || matched;
+                        // 检查是否允许该跨省线路
+                        if (!isAllowedKY(originProv, destProv)) {
+                            continue; // 跳过不允许的跨省
+                        }
+                        const price = calcKY(destMap[matched], w);
+                        if (isFinite(price) && w >= 20) {
+                            const modeLabel = mode === '同城' ? '同城次日' : mode === '省内' ? '省内次日' : '隔日达';
+                            results.push({
+                                carrier: `跨越${modeLabel}`,
+                                origin: origin,
+                                dest: matched,
+                                price: Math.round(price * 100) / 100,
+                                raw: price,
+                                type: '跨越'
+                            });
+                        }
+                    }
+                }
+            }
+
+            results.sort((a, b) => a.raw - b.raw);
+            return results;
+        }
+
+        // ============================================================
+        //  5. UI 交互 (复用)
+        // ============================================================
+
+        const destInput = document.getElementById('destInput');
+        const weightInput = document.getElementById('weightInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const resultList = document.getElementById('resultList');
+        const countDisplay = document.getElementById('countDisplay');
+        const minPriceDisplay = document.getElementById('minPriceDisplay');
+        const bestCarrierDisplay = document.getElementById('bestCarrierDisplay');
+        const suggestionsBox = document.getElementById('suggestions');
+        const toast = document.getElementById('toast');
+
+        let toastTimer = null;
+
+        function showToast(msg) {
+            if (toastTimer) clearTimeout(toastTimer);
+            toast.textContent = msg;
+            toast.classList.add('show');
+            toastTimer = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2800);
+        }
+
+        destInput.addEventListener('input', function() {
+            const val = this.value.trim();
+            if (val.length < 1) {
+                suggestionsBox.classList.remove('show');
+                return;
+            }
+            const suggestions = getSuggestions(val);
+            if (suggestions.length === 0) {
+                suggestionsBox.classList.remove('show');
+                return;
+            }
+            let html = '';
+            for (const s of suggestions) {
+                const highlight = s.display.replace(new RegExp(val, 'gi'), match => `<span class="match">${match}</span>`);
+                html += `<div class="item" data-dest="${s.dest}" data-display="${s.display}">${highlight} <span class="hint">→ ${s.dest}</span></div>`;
+            }
+            suggestionsBox.innerHTML = html;
+            suggestionsBox.classList.add('show');
+        });
+
+        suggestionsBox.addEventListener('click', function(e) {
+            const item = e.target.closest('.item');
+            if (!item) return;
+            const display = item.dataset.display || item.dataset.dest;
+            destInput.value = display;
+            suggestionsBox.classList.remove('show');
+            doSearch();
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#destInput') && !e.target.closest('.suggestions')) {
+                suggestionsBox.classList.remove('show');
+            }
+        });
+
+        function render(results, weight) {
+            if (!results || results.length === 0) {
+                resultList.innerHTML = `
+                    <div class="empty">
+                        <span class="icon">📭</span>
+                        未找到匹配线路<br />
+                        请检查目的地是否正确，或尝试更宽泛的关键词<br />
+                        <small style="color:#99aec9;">（支持：省份、城市、区县名）</small>
+                    </div>
+                `;
+                countDisplay.textContent = '0';
+                minPriceDisplay.textContent = '—';
+                bestCarrierDisplay.textContent = '—';
+                return;
+            }
+
+            const best = results[0];
+            countDisplay.textContent = results.length;
+            minPriceDisplay.textContent = `¥${best.price.toFixed(2)}`;
+            bestCarrierDisplay.textContent = `${best.carrier} · ${best.origin}`;
+
+            let html = '';
+            for (let i = 0; i < results.length; i++) {
+                const r = results[i];
+                const rank = i + 1;
+                let rankClass = '';
+                let rankLabel = `${rank}`;
+                let tagHtml = '';
+                let cardClass = '';
+
+                if (rank === 1) {
+                    rankClass = 'gold';
+                    rankLabel = '🥇 1';
+                    tagHtml = '<span class="tag best">🏆 最优</span>';
+                    cardClass = 'rank-1';
+                } else if (rank === 2) {
+                    rankClass = 'silver';
+                    rankLabel = '🥈 2';
+                    tagHtml = '<span class="tag good">⭐ 推荐</span>';
+                    cardClass = 'rank-2';
+                } else if (rank === 3) {
+                    rankClass = 'bronze';
+                    rankLabel = '🥉 3';
+                    tagHtml = '<span class="tag nice">👍 优选</span>';
+                    cardClass = 'rank-3';
+                } else {
+                    rankLabel = `${rank}`;
+                    tagHtml = `<span class="tag" style="background:#eef3f9;color:#4d6a8f;">#${rank}</span>`;
+                }
+
+                html += `
+                    <div class="card ${cardClass}">
+                        <div class="left">
+                            <div class="rank ${rankClass}">${rankLabel}</div>
+                            <div class="carrier">
+                                ${r.carrier}
+                                <span class="badge">${r.type}</span>
+                            </div>
+                            <div class="origin">
+                                📍 <strong>${r.origin}</strong> → ${r.dest}
+                            </div>
+                            <div style="font-size:11px;color:#7a91b0;">${weight}kg</div>
+                        </div>
+                        <div class="right">
+                            <div class="price">¥${r.price.toFixed(2)} <small>元</small></div>
+                            ${tagHtml}
+                        </div>
+                    </div>
+                `;
+            }
+            resultList.innerHTML = html;
+        }
+
+        function doSearch() {
+            const dest = destInput.value.trim();
+            const weight = parseFloat(weightInput.value);
+
+            if (!dest) {
+                showToast('⚠️ 请输入收货目的地');
+                return;
+            }
+            if (isNaN(weight) || weight < 0.5) {
+                showToast('⚠️ 请输入有效重量 (≥0.5kg)');
+                return;
+            }
+
+            suggestionsBox.classList.remove('show');
+
+            resultList.innerHTML = `<div class="loading">⏳ 正在遍历所有线路 …</div>`;
+
+            setTimeout(() => {
+                const results = queryAll(dest, weight);
+                render(results, weight);
+                if (results.length === 0) {
+                    showToast('🔍 未找到匹配线路，试试更宽泛的关键词');
+                } else {
+                    showToast(`✅ 找到 ${results.length} 条线路，最低 ¥${results[0].price.toFixed(2)}`);
+                }
+            }, 80);
+        }
+
+        searchBtn.addEventListener('click', doSearch);
+        destInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doSearch(); });
+        weightInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doSearch(); });
+
+        let searching = false;
+        const origSearch = doSearch;
+        doSearch = function() {
+            if (searching) return;
+            searching = true;
+            origSearch();
+            setTimeout(() => { searching = false; }, 500);
+        };
+        searchBtn.addEventListener('click', doSearch);
+
+        window.addEventListener('load', () => {
+            setTimeout(doSearch, 400);
+        });
+
+        console.log('🚚 运费速算引擎 v5.0 · 跨越仅保留本省市、江浙沪皖、京津冀');
+        console.log(`✅ 顺丰: ${Object.keys(SF_DATA).length} 个始发地`);
+        console.log(`✅ 韵达: 南京→江浙沪皖`);
+        console.log(`✅ 德邦大票: ${Object.keys(DB_DP_DATA).length} 个始发地`);
+        console.log(`✅ 德邦重货: ${Object.keys(DB_ZH_DATA).length} 个始发地`);
+        console.log(`✅ 德邦小件: ${Object.keys(DB_XJ_DATA).length} 个始发地`);
+        console.log(`✅ 跨越: 同城${Object.keys(KY_DATA.同城).length} 省内${Object.keys(KY_DATA.省内).length} 隔日${Object.keys(KY_DATA.隔日).length} (已过滤跨省)`);
+    </script>
+</body>
+</html>
